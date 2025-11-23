@@ -12,23 +12,34 @@ export default defineConfig({
 		starlight({
 			title: 'Code Conventions',
 			description: 'Team code conventions and standards for Flutter and Unity projects',
+			locales: {
+				root: {
+					label: 'English',
+					lang: 'en',
+				},
+				fr: {
+					label: 'Français',
+					lang: 'fr',
+				},
+			},
+			defaultLocale: 'root',
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Strife-Cyber/convention' },
 			],
-			sidebar: [
-				{
-					label: 'Flutter',
-					autogenerate: { directory: 'flutter' },
-				},
-				{
-					label: 'Unity',
-					autogenerate: { directory: 'unity' },
-				},
-				{
-					label: 'Shared',
-					autogenerate: { directory: 'shared' },
-				},
-			],
+		sidebar: [
+			{
+				label: 'Flutter',
+				autogenerate: { directory: 'flutter' },
+			},
+			{
+				label: 'Unity',
+				autogenerate: { directory: 'unity' },
+			},
+			{
+				label: 'Shared',
+				autogenerate: { directory: 'shared' },
+			},
+		],
 			customCss: [
 				// Add custom CSS if needed
 			],
