@@ -19,11 +19,94 @@ These principles keep our React codebases predictable, accessible, and easy to e
 - Avoid anonymous default exports; named components improve stack traces and DevTools readability.
 - Memoize only when profiling proves it helps. Measure before introducing `React.memo`, `useMemo`, or `useCallback`.
 
+### Example: Component Splitting
+
+```tsx
+// ❌ Bad: Monolithic component
+export default function UserProfile() {
+  const [user, setUser] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [settings, setSettings] = useState({});
+  // ... 300+ lines of logic
+}
+
+// ✅ Good: Split into smaller components
+export function UserProfile() {
+  const { user } = useUser();
+  return (
+    <div>
+      <UserHeader user={user} />
+      <UserPosts userId={user.id} />
+      <UserSettings userId={user.id} />
+    </div>
+  );
+}
+
+// Named exports improve debugging:
+export { UserProfile };
+```
+
 ## Data & Side Effects
 
 - Fetch data inside hooks or route loaders, not inside presentation components.
 - Use `react-query`, `SWR`, or framework loaders for caching, retries, and background refresh.
 - Cancel subscriptions/timeouts in `useEffect` cleanup to prevent memory leaks.
+
+### Example: Data Fetching with React Query
+
+```tsx
+// hooks/useProjects.ts
+import { useQuery } from '@tanstack/react-query';
+import { projectService } from '@/services/projectService';
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: projectService.getAll,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// Component:
+import { useProjects } from '@/hooks/useProjects';
+
+export function ProjectsList() {
+  const { data: projects, isLoading, error } = useProjects();
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <ul>
+      {projects?.map((project) => (
+        <li key={project.id}>{project.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Example: Cleanup in useEffect
+
+```tsx
+useEffect(() => {
+  const controller = new AbortController();
+  
+  fetch('/api/data', { signal: controller.signal })
+    .then(res => res.json())
+    .then(setData)
+    .catch(console.error);
+
+  const timeoutId = setTimeout(() => {
+    // Some delayed action
+  }, 1000);
+
+  return () => {
+    controller.abort(); // Cancel fetch
+    clearTimeout(timeoutId); // Clear timeout
+  };
+}, []);
+```
 
 ## Accessibility
 
@@ -36,6 +119,61 @@ These principles keep our React codebases predictable, accessible, and easy to e
 - Code-split by route and by large components (e.g., modal-heavy flows). Prefer framework-level support (`next/dynamic`, `React.lazy`).
 - Defer non-critical scripts with `async`/`defer` or load them after `requestIdleCallback`.
 - Cache expensive derived data via memoized selectors or `useMemo`.
+
+### Example: Code Splitting
+
+```tsx
+// Lazy load heavy components
+import { lazy, Suspense } from 'react';
+
+const HeavyModal = lazy(() => import('./HeavyModal'));
+const ChartLibrary = lazy(() => import('./ChartLibrary'));
+
+export function Dashboard() {
+  return (
+    <div>
+      <Suspense fallback={<LoadingSpinner />}>
+        <HeavyModal />
+      </Suspense>
+      <Suspense fallback={<div>Loading chart...</div>}>
+        <ChartLibrary />
+      </Suspense>
+    </div>
+  );
+}
+
+// Next.js dynamic import:
+import dynamic from 'next/dynamic';
+
+const DynamicChart = dynamic(() => import('./Chart'), {
+  loading: () => <p>Loading...</p>,
+  ssr: false, // Disable SSR if needed
+});
+```
+
+### Example: Memoization
+
+```tsx
+// Only memoize when profiling shows it helps
+import { useMemo } from 'react';
+
+export function ExpensiveList({ items, filter }) {
+  // Memoize expensive computation
+  const filteredItems = useMemo(() => {
+    return items.filter(item => 
+      item.name.toLowerCase().includes(filter.toLowerCase())
+    );
+  }, [items, filter]);
+
+  return (
+    <ul>
+      {filteredItems.map(item => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
 
 ## Styling & Theming
 

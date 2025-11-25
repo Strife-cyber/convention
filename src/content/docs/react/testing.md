@@ -37,19 +37,129 @@ it('renders the hero block with CTA', () => {
 ## Hooks & State
 
 - For hooks, use `renderHook` and simulate events with `act`. Mock network calls or context providers as needed.
-- Assert that hooks return stable references when dependencies don’t change to avoid needless re-renders.
+- Assert that hooks return stable references when dependencies don't change to avoid needless re-renders.
+
+### Example: Testing Custom Hooks
+
+```tsx
+import { renderHook, waitFor } from '@testing-library/react';
+import { useFetchProjects } from '@/hooks/useFetchProjects';
+import { projectService } from '@/services/projectService';
+
+jest.mock('@/services/projectService');
+
+describe('useFetchProjects', () => {
+  it('fetches projects on mount', async () => {
+    const mockProjects = [{ id: '1', name: 'Project 1' }];
+    (projectService.getAll as jest.Mock).resolves(mockProjects);
+
+    const { result } = renderHook(() => useFetchProjects());
+
+    expect(result.current.loading).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.projects).toEqual(mockProjects);
+  });
+
+  it('handles errors', async () => {
+    const mockError = new Error('Failed to fetch');
+    (projectService.getAll as jest.Mock).rejects(mockError);
+
+    const { result } = renderHook(() => useFetchProjects());
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual(mockError);
+    });
+  });
+});
+```
 
 ## Integration Tests
 
 - Render route-level components with the real layout (`Header`, `Footer`) to catch provider regressions.
 - Mock server responses via MSW so tests remain hermetic yet realistic.
-- Verify analytics or side effects via spies; don’t rely on global state leakage between tests.
+- Verify analytics or side effects via spies; don't rely on global state leakage between tests.
+
+### Example: Integration Test with MSW
+
+```tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+import { HomePage } from '@/app/home/HomePage';
+
+const server = setupServer(
+  http.get('/api/features', () => {
+    return HttpResponse.json([
+      { id: '1', title: 'Feature 1' },
+      { id: '2', title: 'Feature 2' },
+    ]);
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('HomePage Integration', () => {
+  it('renders header, hero, and features', async () => {
+    render(<HomePage />);
+
+    // Verify header is present
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+
+    // Verify hero block
+    expect(screen.getByRole('heading', { name: /welcome/i })).toBeInTheDocument();
+
+    // Wait for features to load
+    await waitFor(() => {
+      expect(screen.getByText('Feature 1')).toBeInTheDocument();
+    });
+
+    // Verify footer
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+  });
+});
+```
 
 ## E2E Tests
 
 - Automate core journeys: sign-in, checkout, content browsing.
 - Run against production-like builds (Preview/Storybook or deployed staging) to validate bundling, routing, and theming.
 - Capture screenshots for visual regression on critical blocks (hero, pricing, CTA sections).
+
+### Example: Playwright E2E Test
+
+```tsx
+// tests/e2e/homepage.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Homepage', () => {
+  test('should display header, hero, and footer', async ({ page }) => {
+    await page.goto('/');
+
+    // Verify header navigation
+    await expect(page.getByRole('link', { name: 'Home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'About' })).toBeVisible();
+
+    // Verify hero section
+    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /get started/i })).toBeVisible();
+
+    // Verify footer
+    await expect(page.getByRole('contentinfo')).toBeVisible();
+  });
+
+  test('should navigate to signup from CTA', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /get started/i }).click();
+    await expect(page).toHaveURL('/signup');
+  });
+});
+```
 
 ## Coverage Expectations
 
