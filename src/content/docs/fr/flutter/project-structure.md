@@ -3,275 +3,187 @@ title: Structure de Projet
 description: Organisation des dossiers et architecture pour les projets Flutter.
 ---
 
-# Structure de Projet
-
-Cette page documente l'organisation standard des dossiers et l'architecture pour les projets Flutter. Nous suivons une **architecture feature-first** avec les principes de Clean Architecture.
+Ce guide reflète désormais la mise en page utilisée dans des projets hérités comme `braidsbook_mobile`. Elle privilégie des dossiers descriptifs (`views/`, `notifiers/`, `manager/`, etc.) plutôt qu'une Clean Architecture profondément imbriquée afin que les équipes identifient rapidement où vivent les responsabilités.
 
 ## Structure des Répertoires
 
-```
+```text
 lib/
-├── core/
-│   ├── constants/
-│   │   ├── app_constants.dart
-│   │   └── api_constants.dart
-│   ├── utils/
-│   │   ├── validators.dart
-│   │   └── formatters.dart
-│   ├── services/
-│   │   ├── api_service.dart
-│   │   └── storage_service.dart
-│   └── errors/
-│       ├── exceptions.dart
-│       └── failures.dart
-├── features/
-│   ├── authentication/
-│   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   ├── models/
-│   │   │   └── repositories/
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   ├── repositories/
-│   │   │   └── usecases/
-│   │   └── presentation/
-│   │       ├── pages/
-│   │       ├── widgets/
-│   │       └── providers/
-│   └── user_profile/
-│       ├── data/
-│       ├── domain/
-│       └── presentation/
-├── shared/
-│   ├── widgets/
-│   │   ├── buttons/
-│   │   ├── inputs/
-│   │   └── cards/
-│   ├── models/
-│   │   └── api_response.dart
-│   └── themes/
-│       ├── app_theme.dart
-│       └── text_styles.dart
+├── l10n/
+├── manager/
+│   ├── auth/
+│   └── diagnostics/
+├── models/
+│   ├── auth/
+│   └── profile/
+├── notifiers/
+│   ├── auth/
+│   └── profile/
+├── services/
+│   ├── api/
+│   └── storage/
+├── theme/
+│   ├── colors.dart
+│   ├── spacing.dart
+│   └── text_styles.dart
+├── utils/
+│   ├── formatters/
+│   └── validators/
+├── views/
+│   ├── auth/
+│   └── profile/
+├── widgets/
+│   ├── buttons/
+│   └── cards/
+├── app_config.dart
+├── firebase_options.dart
 └── main.dart
 ```
 
-## Organisation par Feature
+Chaque nom décrit la préoccupation principale. Ajoutez un seul niveau de sous-dossiers métiers (`auth/`, `profile/`, `billing/`, etc.) dès qu'un répertoire dépasse quelques fichiers, et recyclez les mêmes noms dans les autres dossiers pour conserver une navigation prévisible.
 
-Nous utilisons une **architecture feature-first** où chaque feature est autonome avec ses propres couches data, domain et presentation. Cette approche :
+### `l10n/`
 
-- Améliore l'organisation et la maintenabilité du code
-- Facilite les tests isolés des features
-- Réduit le couplage entre les features
-- Facilite l'ajout ou la suppression de features
+Contient les fichiers de localisation générés et leurs sources `arb`.
 
-### Structure d'une Feature
+- `arb/` : définitions éditables `intl_xx.arb`
+- `generated/` : fichiers `messages_xx.dart` produits par `flutter gen-l10n`
 
-Chaque feature suit Clean Architecture avec trois couches principales :
+N'éditez jamais les fichiers générés à la main, automatisez la génération.
 
-#### Couche Data (`data/`)
-- **datasources/**: Sources de données distantes et locales (clients API, stockage local)
-- **models/**: Objets de transfert de données (DTOs) qui mappent vers JSON/entities
-- **repositories/**: Implémentations de repositories qui coordonnent les sources de données
+### `manager/`
 
-#### Couche Domain (`domain/`)
-- **entities/**: Objets métier (classes Dart pures)
-- **repositories/**: Interfaces de repositories (classes abstraites)
-- **usecases/**: Opérations de logique métier
+Regroupe les orchestrateurs à large périmètre (bootstrap session, gardes de navigation, synchronisation en arrière-plan).
 
-#### Couche Presentation (`presentation/`)
-- **pages/**: Widgets plein écran (écrans)
-- **widgets/**: Widgets réutilisables spécifiques à la feature
-- **providers/**: Providers Riverpod pour la gestion d'état
+- API focalisée (`AuthManager`, `CrashReportingManager`, etc.)
+- Hooks d'initialisation invoqués depuis `main.dart` ou `app_config.dart`
+- Dépendances injectées via le constructeur pour rester testables
 
-**Exemple de Structure de Feature :**
+Évitez d'y ranger des helpers génériques ; si la logique est stateless, redirigez-la vers `utils/`.
 
-```
-authentication/
-├── data/
-│   ├── datasources/
-│   │   ├── auth_remote_datasource.dart
-│   │   └── auth_local_datasource.dart
-│   ├── models/
-│   │   └── user_model.dart
-│   └── repositories/
-│       └── auth_repository_impl.dart
-├── domain/
-│   ├── entities/
-│   │   └── user.dart
-│   ├── repositories/
-│   │   └── auth_repository.dart
-│   └── usecases/
-│       ├── login_usecase.dart
-│       └── logout_usecase.dart
-└── presentation/
-    ├── pages/
-    │   ├── login_page.dart
-    │   └── register_page.dart
-    ├── widgets/
-    │   └── login_form.dart
-    └── providers/
-        └── auth_provider.dart
-```
+**Montée en charge** : créez `manager/auth/`, `manager/payments/`, etc., quand plusieurs orchestrateurs appartiennent au même domaine, tout en gardant chaque sous-dossier sous la barre des ~5 fichiers.
 
-## Répertoire Core
+### `models/`
 
-Le répertoire `core/` contient le code utilisé dans plusieurs features mais qui n'est pas spécifique à une feature.
+Représentations de données partagées :
 
-### `core/constants/`
-Constantes à l'échelle de l'application :
-- Points de terminaison API
-- Valeurs de configuration de l'application
-- Nombres et chaînes magiques
+- DTOs alignés sur les contrats backend
+- Objets de valeur (`Money`, `GeoPoint`) et modèles de persistance locale
+
+Favorisez l'immuabilité, fournissez `fromJson`/`toJson` et placez les fixtures tests à proximité.
+
+**Sous-dossiers recommandés** : regroupez par domaine (`models/auth/`, `models/profile/`) pour refléter les structures de `views/` et `notifiers/`.
+
+### `notifiers/`
+
+Sources d'état (Riverpod, ChangeNotifier, Bloc).
+
+- Consomment des services/managers au lieu d'appeler HTTP directement
+- Exposent des états typés provenant de `models/`
+- Se nomment d'après l'écran ou le domaine (`profile_notifier.dart`)
+
+Documentez les transitions d'état pour faciliter la maintenance.
+
+Ajoutez des sous-dossiers comme `notifiers/auth/` dès qu'une feature comporte plusieurs notifiers, en reprenant les mêmes noms que sous `views/`.
+
+### `services/`
+
+Abstractions orientées IO : REST, stockage, analytics, notifications, paiements.
+
+- Un service par système externe
+- Composants stateless avec dépendances injectées
+- Implémentations mock ou fake pour les tests widgets
+
+Les managers et notifiers consomment ces services ; l'UI ne doit jamais y accéder directement.
+
+Séparez les intégrations par type (`services/api/`, `services/storage/`, `services/notifications/`) afin que les implémentations réelles et les fakes restent côte à côte.
+
+### `theme/`
+
+Centralise les thèmes, couleurs, typographies et espacements.
+
+- `app_theme.dart` expose les variantes `ThemeData`
+- Fichiers auxiliaires (`colors.dart`, `text_styles.dart`, `spacing.dart`)
+
+Branchez-les dans `main.dart` pour garantir une configuration cohérente.
+
+### `utils/`
+
+Petits helpers sans état (formatters, validateurs, extensions). Gardez-les purs ; s'ils commencent à maintenir de l'état, migrez-les vers `services/`.
+
+**Organisation suggérée** : `utils/formatters/`, `utils/validators/`, `utils/extensions/` dès que le dossier abrite plus de quelques helpers.
+
+### `views/`
+
+Écrans et flows de haut niveau (`HomeView`, `BookingFlowView`).
+
+- Nommez les fichiers selon la route (`login_view.dart`)
+- Gardez les arbres de widgets lisibles ; extraire vers `widgets/` quand nécessaire
+- Composez la logique via les notifiers/providers
+
+Les sous-dossiers comme `views/auth/` ou `views/profile/` gardent les écrans groupés et doivent être reflétés sous `notifiers/`, `models/` et `services/` pour suivre un flux métier de bout en bout.
+
+### `widgets/`
+
+Composants UI réutilisables (boutons, cartes, layouts). Ils doivent rester présentations-only : reçoivent des données via paramètres et exposent des callbacks sans instancier de services. Si un widget requiert de la logique, associez-lui un notifier ou convertissez-le en `view`.
+
+Déclinez-les en familles (`widgets/buttons/`, `widgets/cards/`, `widgets/forms/`) pour garder les diffs courts et les imports clairs.
+
+### Fichiers de Configuration
+
+- `app_config.dart` : configuration runtime (API, flags). Charge les valeurs `.env` et expose des getters typés.
+- `app_config.dart.backup` : copie de secours éventuelle ; ne la gardez que si votre workflow l'exige.
+- `firebase_options.dart` : généré par `flutterfire configure`, à ne pas modifier.
+- `main.dart` : initialise les bindings, charge la config, enregistre les managers/notifiers et exécute le widget racine.
+
+Exemple de séquence de démarrage :
 
 ```dart
-// core/constants/app_constants.dart
-class AppConstants {
-  static const String appName = 'MyApp';
-  static const Duration apiTimeout = Duration(seconds: 30);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final config = await AppConfig.load();
+  await ManagerRegistry.bootstrap(config);
+  runApp(MyApp(config: config));
 }
 ```
 
-### `core/utils/`
-Fonctions utilitaires et helpers :
-- Validateurs (email, téléphone, etc.)
-- Formateurs (date, devise, etc.)
-- Extensions
-- Fonctions helper
+### Exemple de Flux de Données
 
-```dart
-// core/utils/validators.dart
-class Validators {
-  static bool isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-}
-```
+1. `views/profile_view.dart` observe `ProfileNotifier`.
+2. `ProfileNotifier` demande les données à `UserService`.
+3. `UserService` lit/écrit `UserModel`.
+4. Le notifier propage l'état mis à jour au view.
 
-### `core/services/`
-Services partagés utilisés dans toute l'application :
-- Service API (configuration du client HTTP)
-- Service de stockage (stockage local, stockage sécurisé)
-- Service de notifications
-- Service d'analytics
-
-### `core/errors/`
-Gestion des erreurs :
-- Exceptions personnalisées
-- Classes de failure
-- Mappers d'erreurs
-
-## Répertoire Shared
-
-Le répertoire `shared/` contient des composants réutilisables qui ne sont pas spécifiques à une feature.
-
-### `shared/widgets/`
-Composants UI réutilisables utilisés dans les features :
-- Boutons (primaire, secondaire, etc.)
-- Champs de saisie (texte, mot de passe, etc.)
-- Cartes, dialogues, loaders
-- Composants de mise en page
-
-### `shared/models/`
-Modèles de données partagés :
-- Wrappers de réponse API
-- DTOs communs
-- Entities partagées
-
-### `shared/themes/`
-Thématisation à l'échelle de l'application :
-- Schémas de couleurs
-- Styles de texte
-- Configuration du thème de l'application
+Cette circulation horizontale sépare clairement les responsabilités sans multiplier les couches.
 
 ## Assets
 
-Les assets sont organisés dans le répertoire `assets/` à la racine du projet :
+La disposition Flutter standard reste valable :
 
-```
+```text
 assets/
 ├── images/
-│   ├── icons/
-│   ├── illustrations/
-│   └── logos/
 ├── fonts/
-│   └── custom_fonts/
 └── animations/
-    └── lottie/
 ```
 
-Référencer les assets dans `pubspec.yaml` :
+Déclarez-les dans `pubspec.yaml` et synchronisez les noms avec les widgets qui les consomment.
 
-```yaml
-flutter:
-  assets:
-    - assets/images/
-    - assets/fonts/
-  fonts:
-    - family: CustomFont
-      fonts:
-        - asset: assets/fonts/custom_font.ttf
-```
+## Bonnes Pratiques
 
-## Fichiers de Configuration
+1. **Une responsabilité par dossier** : un fichier dans `services/` ne doit parler qu'aux systèmes externes.
+2. **Composer plutôt qu'hériter** : les managers composent les services, ils ne les étendent pas.
+3. **Couches fines** : si un notifier duplique la logique d'un manager, consolidez.
+4. **Documenter les contrats** : ajoutez un commentaire bref sur les effets de bord des notifiers/services.
+5. **Tests proches du code** : placez les `*_test.dart` à côté des fichiers concernés.
+6. **Automatiser la génération** : `build_runner` et `flutter gen-l10n` gardent `models/` et `l10n/` alignés.
 
-### Configuration d'Environnement
-Placer la configuration spécifique à l'environnement dans `lib/core/config/` :
+## Quand Revoir la Structure
 
-```
-lib/core/config/
-├── app_config.dart
-├── dev_config.dart
-├── prod_config.dart
-└── staging_config.dart
-```
+Envisagez de réintroduire des dossiers par feature ou une Clean Architecture si :
 
-### Variables d'Environnement
-Utiliser des fichiers `.env` pour la configuration sensible (clés API, etc.) :
+- Un répertoire (comme `views/`) devient trop volumineux
+- Plusieurs équipes gèrent des domaines produits distincts
+- Vous prévoyez d'extraire des packages/modules réutilisables
 
-```
-.env
-.env.dev
-.env.prod
-```
-
-**Note :** Ajouter les fichiers `.env` à `.gitignore` et utiliser `.env.example` comme modèle.
-
-## Point d'Entrée Principal
-
-Le fichier `main.dart` doit être minimal et se concentrer sur :
-- L'initialisation de l'application
-- La configuration des providers
-- La configuration du thème
-- La configuration des routes
-
-```dart
-// main.dart
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ProviderScope(
-      child: MaterialApp(
-        title: 'MyApp',
-        theme: AppTheme.lightTheme,
-        home: const HomePage(),
-      ),
-    );
-  }
-}
-```
-
-## Meilleures Pratiques
-
-1. **Garder les features indépendantes** : Les features ne doivent pas dépendre directement d'autres features
-2. **Utiliser l'injection de dépendances** : Passer les dépendances via les constructeurs
-3. **Suivre la responsabilité unique** : Chaque classe/fichier doit avoir un objectif clair
-4. **Éviter l'imbrication profonde** : Garder la structure des dossiers plate quand c'est possible
-5. **Grouper les fichiers liés** : Garder les fichiers liés proches les uns des autres
-6. **Utiliser les barrel files avec parcimonie** : Seulement pour les groupes fréquemment importés (par exemple, `widgets/widgets.dart`)
-
+Tant que ce n'est pas le cas, la structure inspirée de l'héritage accélère l'onboarding tout en restant évolutive grâce à des noms explicites et une discipline sur les responsabilités.

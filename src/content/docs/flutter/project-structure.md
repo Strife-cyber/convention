@@ -3,275 +3,190 @@ title: Project Structure
 description: Folder organization and architecture for Flutter projects.
 ---
 
-# Project Structure
-
-This page documents the standard folder organization and architecture for Flutter projects. We follow a **feature-first architecture** with Clean Architecture principles.
+This guide now mirrors the layout used in legacy projects such as `braidsbook_mobile`. It favors descriptive directories (`views/`, `notifiers/`, `manager/`, etc.) over deep Clean Architecture nesting so teams can reason about the codebase quickly.
 
 ## Directory Structure
 
-```
+```text
 lib/
-├── core/
-│   ├── constants/
-│   │   ├── app_constants.dart
-│   │   └── api_constants.dart
-│   ├── utils/
-│   │   ├── validators.dart
-│   │   └── formatters.dart
-│   ├── services/
-│   │   ├── api_service.dart
-│   │   └── storage_service.dart
-│   └── errors/
-│       ├── exceptions.dart
-│       └── failures.dart
-├── features/
-│   ├── authentication/
-│   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   ├── models/
-│   │   │   └── repositories/
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   ├── repositories/
-│   │   │   └── usecases/
-│   │   └── presentation/
-│   │       ├── pages/
-│   │       ├── widgets/
-│   │       └── providers/
-│   └── user_profile/
-│       ├── data/
-│       ├── domain/
-│       └── presentation/
-├── shared/
-│   ├── widgets/
-│   │   ├── buttons/
-│   │   ├── inputs/
-│   │   └── cards/
-│   ├── models/
-│   │   └── api_response.dart
-│   └── themes/
-│       ├── app_theme.dart
-│       └── text_styles.dart
+├── l10n/
+├── manager/
+│   ├── auth/
+│   └── diagnostics/
+├── models/
+│   ├── auth/
+│   └── profile/
+├── notifiers/
+│   ├── auth/
+│   └── profile/
+├── services/
+│   ├── api/
+│   └── storage/
+├── theme/
+│   ├── colors.dart
+│   ├── spacing.dart
+│   └── text_styles.dart
+├── utils/
+│   ├── formatters/
+│   └── validators/
+├── views/
+│   ├── auth/
+│   └── profile/
+├── widgets/
+│   ├── buttons/
+│   └── cards/
+├── app_config.dart
+├── firebase_options.dart
 └── main.dart
 ```
 
-## Feature Organization
+The folder names describe the primary concern. Keep each folder shallow; introduce one level of feature or concern-based subfolders (`auth/`, `profile/`, `billing/`, etc.) whenever the file count grows, and mirror those subfolders across directories so navigation stays predictable.
 
-We use a **feature-first architecture** where each feature is self-contained with its own data, domain, and presentation layers. This approach:
+### `l10n/`
 
-- Improves code organization and maintainability
-- Makes features easier to test in isolation
-- Reduces coupling between features
-- Makes it easier to add or remove features
+Holds generated localization files and the `arb` sources. Recommended layout:
 
-### Feature Structure
+- `arb/` for editable `intl_xx.arb` definitions
+- `generated/` for `messages_xx.dart` produced by Flutter's l10n tooling
 
-Each feature follows Clean Architecture with three main layers:
+Never edit generated files manually—automate via `flutter gen-l10n`.
 
-#### Data Layer (`data/`)
-- **datasources/**: Remote and local data sources (API clients, local storage)
-- **models/**: Data transfer objects (DTOs) that map to JSON/entities
-- **repositories/**: Repository implementations that coordinate data sources
+### `manager/`
 
-#### Domain Layer (`domain/`)
-- **entities/**: Business objects (pure Dart classes)
-- **repositories/**: Repository interfaces (abstract classes)
-- **usecases/**: Business logic operations
+Coarse-grained orchestrators that own app-wide flows (session bootstrap, navigation guards, background sync). Each manager should expose:
 
-#### Presentation Layer (`presentation/`)
-- **pages/**: Full screen widgets (screens)
-- **widgets/**: Feature-specific reusable widgets
-- **providers/**: Riverpod providers for state management
+- A focused API (`AuthManager`, `CrashReportingManager`, etc.)
+- Initialization hooks invoked from `main.dart` or `app_config.dart`
+- Dependency injection via constructors so managers stay testable
 
-**Example Feature Structure:**
+Avoid dumping generic helpers here; if the logic is stateless, it likely belongs in `utils/`.
 
-```
-authentication/
-├── data/
-│   ├── datasources/
-│   │   ├── auth_remote_datasource.dart
-│   │   └── auth_local_datasource.dart
-│   ├── models/
-│   │   └── user_model.dart
-│   └── repositories/
-│       └── auth_repository_impl.dart
-├── domain/
-│   ├── entities/
-│   │   └── user.dart
-│   ├── repositories/
-│   │   └── auth_repository.dart
-│   └── usecases/
-│       ├── login_usecase.dart
-│       └── logout_usecase.dart
-└── presentation/
-    ├── pages/
-    │   ├── login_page.dart
-    │   └── register_page.dart
-    ├── widgets/
-    │   └── login_form.dart
-    └── providers/
-        └── auth_provider.dart
-```
+**Scaling tip**: When an area needs multiple managers, nest them under a domain folder (`manager/auth/`, `manager/payments/`) so related orchestrators stay grouped.
 
-## Core Directory
+### `models/`
 
-The `core/` directory contains code that is used across multiple features but is not feature-specific.
+Pure data representations shared across the app:
 
-### `core/constants/`
-Application-wide constants:
-- API endpoints
-- App configuration values
-- Magic numbers and strings
+- API DTOs that mirror backend contracts
+- Domain value objects (e.g., `Money`, `GeoPoint`)
+- Persistence models for local databases
+
+Keep them immutable when possible and pair them with serialization helpers (`fromJson`, `toJson`). Co-locate fixtures or `fake_*.dart` files for tests.
+
+**Common subfolders**: Group by domain (`models/auth/`, `models/profile/`) to match the way views and notifiers are organized.
+
+### `notifiers/`
+
+State holders (Riverpod notifiers, ChangeNotifiers, Bloc classes). Each notifier:
+
+- Consumes services/managers rather than reaching out to HTTP directly
+- Exposes strongly typed state models from `models/`
+- Lives close to the logic it manages; if a notifier only serves one screen, prepend the screen name (e.g., `profile_notifier.dart`)
+
+Document state transitions inside the file so other developers understand the lifecycle.
+
+Add subfolders like `notifiers/auth/` once a domain hosts several state holders, mirroring the naming used under `views/`.
+
+### `services/`
+
+IO-facing abstractions: REST clients, storage, analytics, push notifications, payment SDKs. Guidelines:
+
+- One service per external system; split read/write responsibilities when helpful
+- Keep each service stateless and inject dependencies in constructors
+- Provide mock or fake implementations for widget tests
+
+Managers and notifiers consume services; UI should never reference them directly.
+
+Split integrations by concern (`services/api/`, `services/storage/`, `services/notifications/`) so fake and real clients live side by side.
+
+### `theme/`
+
+Centralize color schemes, typography, component themes, and spacing tokens. Common files:
+
+- `app_theme.dart`: exposes `ThemeData` variants
+- `colors.dart`, `text_styles.dart`, `spacing.dart`
+
+Hook these up inside `main.dart` so all `MaterialApp` instances use the same configuration.
+
+### `utils/`
+
+Small, stateless helpers: formatters, validators, date/number utilities, extensions. Keep functions pure and unit-test them directly. If a utility grows stateful (e.g., caching), relocate it to `services/`.
+
+Suggested layout: `utils/formatters/`, `utils/validators/`, `utils/extensions/` once the helpers exceed a handful of files.
+
+### `views/`
+
+Top-level screens and flows. Each file usually defines a full page (`HomeView`, `BookingFlowView`). Recommended conventions:
+
+- Name files after the route (e.g., `login_view.dart`)
+- Keep widget trees readable; extract reusable components to `widgets/`
+- Compose view logic from notifiers via providers or controllers
+
+Subfolders like `views/auth/` are fine when a domain has multiple screens.
+
+Whenever you introduce such subfolders, echo the same domain name under `notifiers/`, `models/`, and `services/` so teams can trace a feature end to end.
+
+### `widgets/`
+
+Reusable UI components (buttons, cards, layout primitives). Widgets should be presentation-only: accept data via parameters and expose callbacks instead of instantiating services. If a widget requires logic, pair it with a notifier under `notifiers/` or convert it into a `view`.
+
+Break large collections into families (`widgets/buttons/`, `widgets/cards/`, `widgets/forms/`) to keep diffs small and imports clear.
+
+### Configuration Files
+
+- `app_config.dart`: runtime configuration (API endpoints, feature flags). Load `.env` values here and expose typed getters.
+- `app_config.dart.backup`: snapshot of previous config—keep it only if your workflow depends on manual rollback.
+- `firebase_options.dart`: generated by `flutterfire configure`; never edit by hand.
+- `main.dart`: initializes bindings, loads config, wires managers/notifiers, and runs the root widget.
+
+Example boot sequence:
 
 ```dart
-// core/constants/app_constants.dart
-class AppConstants {
-  static const String appName = 'MyApp';
-  static const Duration apiTimeout = Duration(seconds: 30);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final config = await AppConfig.load();
+  await ManagerRegistry.bootstrap(config);
+  runApp(MyApp(config: config));
 }
 ```
 
-### `core/utils/`
-Utility functions and helpers:
-- Validators (email, phone, etc.)
-- Formatters (date, currency, etc.)
-- Extensions
-- Helper functions
+### Data Flow Example
 
-```dart
-// core/utils/validators.dart
-class Validators {
-  static bool isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-}
-```
+1. `views/profile_view.dart` watches `ProfileNotifier`.
+2. `ProfileNotifier` requests data from `UserService`.
+3. `UserService` fetches/updates `UserModel`.
+4. `UserModel` updates notify the view via the notifier's state.
 
-### `core/services/`
-Shared services used across the app:
-- API service (HTTP client setup)
-- Storage service (local storage, secure storage)
-- Notification service
-- Analytics service
-
-### `core/errors/`
-Error handling:
-- Custom exceptions
-- Failure classes
-- Error mappers
-
-## Shared Directory
-
-The `shared/` directory contains reusable components that are not feature-specific.
-
-### `shared/widgets/`
-Reusable UI components used across features:
-- Buttons (primary, secondary, etc.)
-- Input fields (text, password, etc.)
-- Cards, dialogs, loaders
-- Layout components
-
-### `shared/models/`
-Shared data models:
-- API response wrappers
-- Common DTOs
-- Shared entities
-
-### `shared/themes/`
-App-wide theming:
-- Color schemes
-- Text styles
-- App theme configuration
+This horizontal flow keeps responsibilities separated without deep nesting.
 
 ## Assets
 
-Assets are organized in the `assets/` directory at the project root:
+Standard Flutter asset layout still applies:
 
-```
+```text
 assets/
 ├── images/
-│   ├── icons/
-│   ├── illustrations/
-│   └── logos/
 ├── fonts/
-│   └── custom_fonts/
 └── animations/
-    └── lottie/
 ```
 
-Reference assets in `pubspec.yaml`:
-
-```yaml
-flutter:
-  assets:
-    - assets/images/
-    - assets/fonts/
-  fonts:
-    - family: CustomFont
-      fonts:
-        - asset: assets/fonts/custom_font.ttf
-```
-
-## Configuration Files
-
-### Environment Configuration
-Place environment-specific configuration in `lib/core/config/`:
-
-```
-lib/core/config/
-├── app_config.dart
-├── dev_config.dart
-├── prod_config.dart
-└── staging_config.dart
-```
-
-### Environment Variables
-Use `.env` files for sensitive configuration (API keys, etc.):
-
-```
-.env
-.env.dev
-.env.prod
-```
-
-**Note:** Add `.env` files to `.gitignore` and use `.env.example` as a template.
-
-## Main Entry Point
-
-The `main.dart` file should be kept minimal and focus on:
-- App initialization
-- Provider setup
-- Theme configuration
-- Route configuration
-
-```dart
-// main.dart
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ProviderScope(
-      child: MaterialApp(
-        title: 'MyApp',
-        theme: AppTheme.lightTheme,
-        home: const HomePage(),
-      ),
-    );
-  }
-}
-```
+Declare them inside `pubspec.yaml` and keep names synchronized with widgets that consume them.
 
 ## Best Practices
 
-1. **Keep features independent**: Features should not directly depend on other features
-2. **Use dependency injection**: Pass dependencies through constructors
-3. **Follow single responsibility**: Each class/file should have one clear purpose
-4. **Avoid deep nesting**: Keep folder structure flat when possible
-5. **Group related files**: Keep related files close together
-6. **Use barrel files sparingly**: Only for frequently imported groups (e.g., `widgets/widgets.dart`)
+1. **One responsibility per folder**: if a file lives in `services/`, it should only talk to external systems.
+2. **Prefer composition over inheritance**: managers compose services, not extend them.
+3. **Keep layers thin**: if a notifier begins to duplicate manager logic, consolidate it.
+4. **Document contracts**: add short comments to notifiers/services explaining side effects.
+5. **Pair tests with code**: `*_test.dart` files can sit next to their subjects inside each directory.
+6. **Automate generation**: use `build_runner` or `flutter gen-l10n` so `models/` and `l10n/` stay consistent.
 
+## When to Revisit the Structure
+
+Consider reintroducing feature-based folders or Clean Architecture slices if:
+
+- A single directory (e.g., `views/`) grows beyond what navigation can manage
+- Multiple teams own different product areas and need stricter boundaries
+- You plan to extract packages/modules for reuse
+
+Until then, the legacy-inspired structure keeps onboarding fast while remaining scalable through clear naming and disciplined responsibilities.
