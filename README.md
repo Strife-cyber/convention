@@ -4,9 +4,10 @@ A comprehensive documentation site for team code conventions and standards for F
 
 ## 📖 About
 
-This documentation site serves as the central reference for code conventions, best practices, and standards used across Flutter and Unity projects. It provides clear guidelines for:
+This documentation site serves as the central reference for code conventions, best practices, and standards used across Flutter, React, and Unity projects. It provides clear guidelines for:
 
 - **Flutter Development**: Naming conventions, project structure, code style, state management, widget conventions, testing standards, package management, and best practices
+- **React Development**: Project structure, component architecture, styling strategies, state management, testing standards, and best practices for reusable UI blocks
 - **Unity Development**: Naming conventions, project structure, code style, script organization, asset management, performance guidelines, and best practices
 - **Shared Conventions**: Git workflow, code review guidelines, and documentation standards
 
@@ -165,6 +166,14 @@ The site uses Starlight's default theme. To customize:
 - Widget Conventions
 - Testing Standards
 - Package Management
+- Best Practices
+
+### React Conventions
+- Project Structure
+- Component Architecture
+- Styling Guidelines
+- State Management
+- Testing Standards
 - Best Practices
 
 ### Unity Conventions

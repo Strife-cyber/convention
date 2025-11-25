@@ -26,20 +26,24 @@ export default defineConfig({
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/Strife-Cyber/convention' },
 			],
-		sidebar: [
-			{
-				label: 'Flutter',
-				autogenerate: { directory: 'flutter' },
-			},
-			{
-				label: 'Unity',
-				autogenerate: { directory: 'unity' },
-			},
-			{
-				label: 'Shared',
-				autogenerate: { directory: 'shared' },
-			},
-		],
+			sidebar: [
+				{
+					label: 'Flutter',
+					autogenerate: { directory: 'flutter' },
+				},
+				{
+					label: 'React',
+					autogenerate: { directory: 'react' },
+				},
+				{
+					label: 'Unity',
+					autogenerate: { directory: 'unity' },
+				},
+				{
+					label: 'Shared',
+					autogenerate: { directory: 'shared' },
+				},
+			],
 			customCss: [
 				// Add custom CSS if needed
 			],
