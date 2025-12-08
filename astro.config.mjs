@@ -40,6 +40,10 @@ export default defineConfig({
 					autogenerate: { directory: 'unity' },
 				},
 				{
+					label: 'Java',
+					autogenerate: { directory: 'java' },
+				},
+				{
 					label: 'Shared',
 					autogenerate: { directory: 'shared' },
 				},

@@ -1,14 +1,15 @@
 # Code Conventions Documentation
 
-A comprehensive documentation site for team code conventions and standards for Flutter and Unity projects, built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build).
+A comprehensive documentation site for team code conventions and standards for Flutter, React, Unity, and Java projects, built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build).
 
 ## 📖 About
 
-This documentation site serves as the central reference for code conventions, best practices, and standards used across Flutter, React, and Unity projects. It provides clear guidelines for:
+This documentation site serves as the central reference for code conventions, best practices, and standards used across Flutter, React, Unity, and Java projects. It provides clear guidelines for:
 
 - **Flutter Development**: Naming conventions, project structure, code style, state management, widget conventions, testing standards, package management, and best practices
 - **React Development**: Project structure, component architecture, styling strategies, state management, testing standards, and best practices for reusable UI blocks
 - **Unity Development**: Naming conventions, project structure, code style, script organization, asset management, performance guidelines, and best practices
+- **Java Development**: Naming conventions, code style, object-oriented programming, Java SE, web development (Servlets, JSP, Spring Boot), Android development, database management (JDBC, JPA), performance optimization, debugging, and comprehensive design patterns
 - **Shared Conventions**: Git workflow, code review guidelines, and documentation standards
 
 ## 🚀 Getting Started
@@ -48,7 +49,9 @@ The site will be available at `http://localhost:4321`
 │   ├── content/
 │   │   └── docs/       # Documentation content
 │   │       ├── flutter/    # Flutter conventions
+│   │       ├── react/      # React conventions
 │   │       ├── unity/      # Unity conventions
+│   │       ├── java/       # Java conventions
 │   │       └── shared/     # Shared conventions
 │   └── content.config.ts
 ├── astro.config.mjs     # Astro configuration
@@ -76,7 +79,9 @@ Documentation content is written in Markdown (`.md`) or MDX (`.mdx`) format and 
 
 1. Create a new `.md` or `.mdx` file in the appropriate directory:
    - `src/content/docs/flutter/` for Flutter conventions
+   - `src/content/docs/react/` for React conventions
    - `src/content/docs/unity/` for Unity conventions
+   - `src/content/docs/java/` for Java conventions
    - `src/content/docs/shared/` for shared conventions
 
 2. Add frontmatter to the file:
@@ -185,6 +190,18 @@ The site uses Starlight's default theme. To customize:
 - Performance Guidelines
 - Best Practices
 
+### Java Conventions
+- Naming Conventions
+- Code Style (variables, loops, conditions)
+- Object-Oriented Programming
+- Java SE (console apps, files, threads, collections)
+- Web Development (Servlets, JSP, Spring Boot, REST APIs)
+- Android Development
+- Database Management (JDBC, JPA/Hibernate)
+- Performance Optimization
+- Debugging and Error Handling
+- Best Practices (Design Patterns, SOLID principles, testing)
+
 ### Shared Conventions
 - Git Workflow
 - Code Review
@@ -207,7 +224,10 @@ The site uses Starlight's default theme. To customize:
 - [Astro Documentation](https://docs.astro.build)
 - [Starlight Documentation](https://starlight.astro.build)
 - [Flutter Documentation](https://flutter.dev/docs)
+- [React Documentation](https://react.dev)
 - [Unity Documentation](https://docs.unity3d.com)
+- [Java Documentation](https://docs.oracle.com/javase/)
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
 
 ## 🐛 Troubleshooting
 
